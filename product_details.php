@@ -6,7 +6,6 @@ if ($conn->connect_error) {
     die("Грешка при свързване: " . $conn->connect_error);
 }
 
-// Зареждане на категории
 $sql = "SELECT category_id, name FROM product_categories";
 $result = $conn->query($sql);
 
@@ -22,14 +21,12 @@ $men_categories = [1, 2, 4, 5, 6, 8, 9, 10];
 $kids_categories = [1, 2, 4, 5, 6, 8, 9];
 $accessories_categories = [11, 12, 13, 14, 15, 16, 17];
 
-// Детайли за продукта
 $product_id = isset($_GET['id']) ? $_GET['id'] : null;
 
 if (!$product_id) {
     die("Невалиден продукт.");
 }
 
-// Променено: Взимаме и името на категорията
 $product_sql = "SELECT p.*, c.name AS category_name 
                 FROM products p
                 JOIN product_categories c ON p.category_id = c.category_id
@@ -48,7 +45,6 @@ $product = $result->fetch_assoc();
 $category_id = $product['category_id'];
 $category_name = strtolower($product['category_name']);
 
-// Зареждане на наличности от таблица stock
 $stock_sql = "SELECT size, quantity FROM stock WHERE product_id = ?";
 $stock_stmt = $conn->prepare($stock_sql);
 
@@ -177,25 +173,37 @@ while ($row = $stock_result->fetch_assoc()) {
         }
 
         .quantity-wrapper {
-            display: flex;
-            align-items: center;
-            margin: 10px 0;
-        }
+    display: flex;
+    align-items: center;
+    justify-content: space-between; /* Разпределя пространството между елементите */
+    gap: 20px; /* Разстояние между бутоните */
+    padding: 10px 20px; /* Вътрешен падинг на самия контейнер */
+    background-color: #ffe6eb; /* Лека розова основа (по избор) */
+    border-radius: 10px;
+    width: fit-content; /* Или фиксирана ширина, напр. 300px */
+    margin: 0 auto; /* Центрира контейнера */
+}
 
-        .quantity-btn {
-            background-color: #ffb6c1;
-            border: none;
-            padding: 6px 12px;
-            font-size: 16px;
-            cursor: pointer;
-        }
+.quantity-btn,
+.quantity-input {
+    height: 40px;
+    width: 40px;
+    font-size: 18px;
+    border-radius: 6px;
+    text-align: center;
+    padding: 0;
+}
 
-        .quantity-input {
-            width: 50px;
-            text-align: center;
-            border: 1px solid #ccc;
-            margin: 0 5px;
-        }
+.quantity-btn {
+    background-color: #ffb6c1;
+    border: none;
+    cursor: pointer;
+}
+
+.quantity-input {
+    border: 1px solid #ccc;
+    width: 50px;
+}
 
         .add-to-cart-btn {
             background-color: #ff4d79;
@@ -278,31 +286,35 @@ while ($row = $stock_result->fetch_assoc()) {
         <div class="product-right">
             <p class="description"><?= nl2br(htmlspecialchars($product['description'])) ?></p>
             <p class="price"><?= number_format($product['price'], 2) ?> BGN</p>
+            <p id="available-stock" style="margin-top: 10px; font-size: 14px; color: #555;"></p>
 
-            <form method="post" action="add_to_cart.php">
+            <form method="post" action="add_to_cart.php" onsubmit="return validateSizeSelection();">
                 <input type="hidden" name="name" value="<?= htmlspecialchars($product['name']) ?>">
                 <input type="hidden" name="price" value="<?= $product['price'] ?>">
                 <input type="hidden" name="image" value="<?= htmlspecialchars($product['image_url']) ?>">
 
                 <div class="size-selector">
-    <p>Размер:</p>
-    <div class="sizes-button-group">
-        <?php
-        if (in_array($category_id, $accessories_categories)) {
-            echo '<button type="button" class="size-btn active" disabled>One Size</button>';
-            echo '<input type="hidden" name="size" value="One Size">';
-        } else {
-            $sizes = ['S', 'M', 'L', 'XL'];
-            foreach ($sizes as $size) {
-                $available = isset($available_sizes[$size]) && $available_sizes[$size] > 0;
-                echo '<button type="button" class="size-btn ' . (!$available ? 'disabled-size' : '') . '" data-size="' . $size . '" ' . (!$available ? 'disabled' : '') . '>' . $size . '</button>';
-            }
-            echo '<input type="hidden" name="size" id="selected-size" required>';
-        }
-        ?>
-    </div>
-</div>
-
+                    <p>Размер:</p>
+                    <div class="sizes-button-group">
+                        <?php
+if (in_array($category_id, $accessories_categories)) {
+    echo '<button type="button" class="size-btn active" disabled>One Size</button>';
+    echo '<input type="hidden" name="size" id="selected-size" value="One Size">';
+    $is_one_size = true;
+} else {
+    $is_one_size = false;
+    foreach ($available_sizes as $size => $quantity) {
+    $available = $quantity > 0;
+    echo '<button type="button" class="size-btn ' . (!$available ? 'disabled-size' : '') . '" 
+            data-size="' . htmlspecialchars($size) . '" 
+            data-quantity="' . intval($quantity) . '" 
+            ' . (!$available ? 'disabled' : '') . '>' . htmlspecialchars($size) . '</button>';
+}
+    echo '<input type="hidden" name="size" id="selected-size" value="">';
+}
+?>
+                    </div>
+                </div>
 
                 <div class="product-actions">
                     <div class="quantity-wrapper">
@@ -310,7 +322,7 @@ while ($row = $stock_result->fetch_assoc()) {
                         <input type="number" name="quantity" value="1" min="1" class="quantity-input" readonly>
                         <button type="button" class="quantity-btn" onclick="changeQuantity(this, 1)">+</button>
                     </div>
-                    <button type="submit" class="add-to-cart-btn large">🛒 Добави в количката</button>
+                    <button type="submit" class="add-to-cart-btn large" id="add-to-cart-btn" <?= !$is_one_size && empty($_POST['size']) ? 'disabled' : '' ?>>🛒 Add</button>
                 </div>
 
             </form>
@@ -361,21 +373,88 @@ while ($row = $stock_result->fetch_assoc()) {
 function changeQuantity(button, delta) {
     const input = button.parentElement.querySelector('.quantity-input');
     let value = parseInt(input.value);
+    const max = parseInt(input.max) || Infinity; // fallback if max is not set
+
     if (isNaN(value)) value = 1;
+
     value += delta;
+
     if (value < 1) value = 1;
+    if (value > max) value = max;
+
     input.value = value;
 }
-
+ 
 document.querySelectorAll('.size-btn').forEach(button => {
     button.addEventListener('click', function () {
         if (this.disabled) return;
+ 
+        // Clear other active states
         document.querySelectorAll('.size-btn').forEach(btn => btn.classList.remove('active'));
         this.classList.add('active');
+ 
         const selected = document.getElementById('selected-size');
-        if (selected) selected.value = this.dataset.size;
+        if (selected) {
+            selected.value = this.dataset.size;
+        }
+ 
+        const cartBtn = document.getElementById('add-to-cart-btn');
+        if (cartBtn && selected.value !== '') {
+            cartBtn.disabled = false;
+        }
+ 
+        // ✅ Use backticks here to insert variable
+        const availableQty = this.dataset.quantity;
+        const availableStock = document.getElementById('available-stock');
+        if (availableStock) {
+            availableStock.textContent = `Availability: ${availableQty} pieces`;
+        }
+ 
+        // ✅ Limit max quantity
+        const qtyInput = document.querySelector('.quantity-input');
+        if (qtyInput) {
+            qtyInput.max = availableQty;
+            if (parseInt(qtyInput.value) > parseInt(availableQty)) {
+                qtyInput.value = availableQty;
+            }
+        }
     });
 });
+ 
+function validateSizeSelection() {
+    const sizeInput = document.getElementById('selected-size');
+    if (!sizeInput || sizeInput.value.trim() === '') {
+        alert('Please, choose a size.');
+        return false;
+    }
+    return true;
+}
+ 
+// ✅ Handle "One Size" logic
+document.addEventListener('DOMContentLoaded', function () {
+    const selectedSize = document.getElementById('selected-size');
+    const cartBtn = document.getElementById('add-to-cart-btn');
+    const availableStock = document.getElementById('available-stock');
+    const qtyInput = document.querySelector('.quantity-input');
+ 
+    if (selectedSize && selectedSize.value === "One Size") {
+        cartBtn.disabled = false;
+ 
+        <?php if ($is_one_size): ?>
+            const oneSizeQty = <?= isset($available_sizes['One Size']) ? json_encode($available_sizes['One Size']) : 1 ?>;
+            if (availableStock) {
+                availableStock.textContent = `Availability: ${oneSizeQty} pieces`;
+            }
+            if (qtyInput) {
+                qtyInput.max = oneSizeQty;
+                if (parseInt(qtyInput.value) > oneSizeQty) {
+                    qtyInput.value = oneSizeQty;
+                }
+            }
+        <?php endif; ?>
+    }
+});
+
 </script>
 </body>
 </html>

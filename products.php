@@ -26,14 +26,30 @@ $women_categories = [1, 2, 3, 4, 5, 6, 7, 9, 10];
 $men_categories = [1, 2, 4, 5, 6, 8, 9, 10];
 $kids_categories = [1, 2, 4, 5, 6, 8, 9];
 $accessories_categories = [11, 12, 13, 14, 15, 16, 17];
+$sort = isset($_GET['sort']) ? $_GET['sort'] : null;
+$order_clause = "";
 
+switch ($sort) {
+    case 'price_asc':
+        $order_clause = " ORDER BY price ASC";
+        break;
+    case 'price_desc':
+        $order_clause = " ORDER BY price DESC";
+        break;
+    case 'name_asc':
+        $order_clause = " ORDER BY name ASC";
+        break;
+    case 'name_desc':
+        $order_clause = " ORDER BY name DESC";
+        break;
+}
 // Подготовка на заявката
 if ($gender_id !== null && $category_id !== null) {
-    $sql = "SELECT * FROM products WHERE gender_id = ? AND category_id = ?";
+    $sql = "SELECT * FROM products WHERE gender_id = ? AND category_id = ?" . $order_clause;
 } elseif ($category_id !== null) {
-    $sql = "SELECT * FROM products WHERE category_id = ?";
+    $sql = "SELECT * FROM products WHERE category_id = ?" . $order_clause;
 } elseif ($gender_id !== null) {
-    $sql = "SELECT * FROM products WHERE gender_id = ?";
+    $sql = "SELECT * FROM products WHERE gender_id = ?" . $order_clause;
 } else {
     $sql = "SELECT * FROM products";
 }
@@ -127,6 +143,25 @@ $result = $stmt->get_result();
         </div>
     </div>
 </header>
+<div class="filter-container">
+    <form method="get">
+    <?php if ($gender_id !== null): ?>
+        <input type="hidden" name="gender" value="<?= $gender_id ?>">
+    <?php endif; ?>
+    <?php if ($category_id !== null): ?>
+        <input type="hidden" name="category" value="<?= $category_id ?>">
+    <?php endif; ?>
+
+    <label for="sort">Sort by:</label>
+    <select name="sort" id="sort" onchange="this.form.submit()">
+        <option value="">-- Choose --</option>
+        <option value="price_asc" <?= (isset($_GET['sort']) && $_GET['sort'] === 'price_asc') ? 'selected' : '' ?>>Price (Low to High)</option>
+        <option value="price_desc" <?= (isset($_GET['sort']) && $_GET['sort'] === 'price_desc') ? 'selected' : '' ?>>Price (High to Low)</option>
+        <option value="name_asc" <?= (isset($_GET['sort']) && $_GET['sort'] === 'name_asc') ? 'selected' : '' ?>>Name (A-Z)</option>
+        <option value="name_desc" <?= (isset($_GET['sort']) && $_GET['sort'] === 'name_desc') ? 'selected' : '' ?>>Name (Z-A)</option>
+    </select>
+    </form>
+</div>
 
 <main>
     <h2>Products</h2>

@@ -111,7 +111,7 @@ $accessories_categories = [11, 12, 13, 14, 15, 16, 17];
                 die("Грешка при свързване: " . $conn->connect_error);
             }
 
-            $sql = "SELECT product_id, name, description, price, image_url FROM products ORDER BY product_id DESC";
+            $sql = "SELECT product_id, name, description, price, image_url FROM products ORDER BY product_id DESC LIMIT 30";
             $result = $conn->query($sql);
 
             if ($result->num_rows > 0) {
@@ -122,22 +122,21 @@ echo '<img src="' . $row["image_url"] . '" alt="' . htmlspecialchars($row["name"
 echo '</a>';
                     echo '<p>' . htmlspecialchars($row["description"]) . '</p>';
                     echo '<p class="price">' . number_format($row["price"], 2) . ' bgn</p>';
-                    echo '<form method="post" action="add_to_cart.php">';
-                    echo '<input type="hidden" name="name" value="' . htmlspecialchars($row["name"]) . '">';
-                    echo '<input type="hidden" name="price" value="' . $row["price"] . '">';
-                    echo '<input type="hidden" name="image" value="' . htmlspecialchars($row["image_url"]) . '">';
-                    echo '<div class="product-actions">';
-                    echo '  <div class="quantity-and-button">';
-                    echo '    <div class="quantity-wrapper">';
-                    echo '      <button type="button" class="quantity-btn" onclick="changeQuantity(this, -1)">-</button>';
-                    echo '      <input type="number" name="quantity" value="1" min="1" class="quantity-input" readonly>';
-                    echo '      <button type="button" class="quantity-btn" onclick="changeQuantity(this, 1)">+</button>';
-                    echo '    </div>';
-                    echo '    <button type="submit" class="add-to-basket">🛒 Add</button>';
-                    echo '  </div>';
-                    echo '</div>';
-                    echo '</form>';
-                    echo '</div>';
+                    echo '<form method="get" action="product_details.php">';
+echo '<form method="get" action="product_details.php">';
+echo '<input type="hidden" name="id" value="' . $row["product_id"] . '">';
+echo '<div class="product-actions">';
+echo '  <div class="quantity-and-button">';
+echo '    <div class="quantity-wrapper">';
+echo '      <button type="button" class="quantity-btn" onclick="changeQuantity(this, -1)">-</button>';
+echo '      <input type="number" name="quantity" value="1" min="1" class="quantity-input" readonly>';
+echo '      <button type="button" class="quantity-btn" onclick="changeQuantity(this, 1)">+</button>';
+echo '    </div>';
+echo '    <button type="submit" class="add-to-basket">🛒 Add</button>';
+echo '  </div>';
+echo '</div>';
+echo '</form>';
+echo '</div>';
                 }
             } else {
                 echo "<p>Not found items.</p>";
